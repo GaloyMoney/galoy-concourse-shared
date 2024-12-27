@@ -1,0 +1,27 @@
+#@data/values
+---
+
+git_uri: git@github.com:GaloyMoney/concourse-shared.git
+git_branch: main
+github_private_key: ((github.private_key))
+github_token: ((github.api_token))
+github_app_id: ((github.github_app_id))
+github_app_private_key: ((github.github_app_private_key))
+
+docker_registry: us.gcr.io/galoyorg
+docker_registry_user: ((docker-creds.username))
+docker_registry_password: ((docker-creds.password))
+container_image: galoy-dev
+staging_inception_creds: ((staging-gcp-creds.creds_json))
+staging_bucket_name: galoy-staging-backups
+
+git_org_uri: git@github.com:GaloyMoney
+pr_branch: bump-shared-tasks
+source_repo_branch: main
+
+src_repos:
+  sqlxmq-executor: ["rust", "docker"]
+  bria: ["rust", "docker", "chart"]
+  cala: ["rust", "docker"]
+  cala-enterprise: ["rust", "docker"]
+  lana-bank: ["rust", "docker"]

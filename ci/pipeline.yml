@@ -1,0 +1,277 @@
+#@ load("@ytt:data", "data")
+
+#@ def pipeline_image():
+#@   return data.values.docker_registry + "/galoy-deployments-pipeline"
+#@ end
+
+#@ def task_image_config():
+type: registry-image
+source:
+  username: #@ data.values.docker_registry_user
+  password: #@ data.values.docker_registry_password
+  repository: #@ pipeline_image()
+#@ end
+
+#@ def repo_pr_branch_resource_name(repo_name):
+#@   return repo_name + "-pr-branch"
+#@ end
+
+#@ def repo_resource_name(repo_name):
+#@   return repo_name + "-repo"
+#@ end
+
+groups:
+- name: bump-shared-files
+  jobs:
+#@ for repo in data.values.src_repos:
+  - #@ "bump-shared-files-in-" + repo
+#@ end
+- name: images
+  jobs:
+  - build-rust-concourse-image
+  - build-nodejs-concourse-image
+  - build-wincross-pipeline-image
+  - build-release-pipeline-image
+- name: backups
+  jobs:
+  - backup-org-to-gcp
+
+#@ def build_task(input_name, context_path):
+task: build
+config:
+  platform: linux
+  image_resource:
+    type: registry-image
+    source:
+      repository: gcr.io/kaniko-project/executor
+      tag: debug
+  inputs:
+  - name: #@ input_name
+  outputs:
+  - name: image
+  run:
+    path: /kaniko/executor
+    args:
+      - --dockerfile=Dockerfile
+      - #@ "--context=" + context_path
+      - --use-new-run
+      - --single-snapshot
+      - --cache=false
+      - --no-push
+      - --tar-path=image/image.tar
+#@ end
+
+jobs:
+- name: build-rust-concourse-image
+  serial: true
+  plan:
+  - {get: rust-image-def, trigger: true}
+  - #@ build_task("rust-image-def", "rust-image-def/images/rust-concourse")
+  - put: rust-image
+    params:
+      image: image/image.tar
+
+- name: build-nodejs-concourse-image
+  serial: true
+  plan:
+  - {get: nodejs-image-def, trigger: true}
+  - #@ build_task("nodejs-image-def", "nodejs-image-def/images/nodejs-concourse")
+  - put: nodejs-image
+    params:
+      image: image/image.tar
+
+- name: build-release-pipeline-image
+  serial: true
+  plan:
+  - get: release-pipeline-image-def
+    trigger: true
+  - #@ build_task("release-pipeline-image-def", "release-pipeline-image-def/images/release")
+  - put: release-pipeline-image
+    params:
+      image: image/image.tar
+
+- name: build-wincross-pipeline-image
+  serial: true
+  plan:
+  - get: wincross-pipeline-image-def
+    trigger: true
+  - #@ build_task("wincross-pipeline-image-def", "wincross-pipeline-image-def/images/wincross")
+  - put: wincross-pipeline-image
+    params:
+      image: image/image.tar
+
+
+#@ for repo in data.values.src_repos:
+- name: #@ "bump-shared-files-in-" + repo
+  plan:
+  - in_parallel:
+    - { get: shared-files, trigger: true }
+    - { get: pipeline-tasks }
+    - get: #@ repo_resource_name(repo)
+  - task: #@ "bump-shared-files-" + repo
+    config:
+      platform: linux
+      image_resource: #@ task_image_config()
+      inputs:
+      - name: shared-files
+        path: repo
+      - name: pipeline-tasks
+      - name: #@ repo_resource_name(repo)
+        path: source-repo
+      outputs:
+      - name: source-repo
+      params:
+        FEATURES: #@ data.values.src_repos[repo]
+      run:
+        path: pipeline-tasks/ci/tasks/bump-shared-files.sh
+  - put: #@ repo_pr_branch_resource_name(repo)
+    params:
+      repository: source-repo
+      force: true
+  - task: open-source-pr
+    config:
+      platform: linux
+      image_resource: #@ task_image_config()
+      inputs:
+      - name: pipeline-tasks
+      - name: #@ repo_resource_name(repo)
+        path: source-repo
+      params:
+        PR_BRANCH: #@ data.values.pr_branch
+        BRANCH: #@ data.values.source_repo_branch
+        GH_APP_ID: #@ data.values.github_app_id
+        GH_APP_PRIVATE_KEY: #@ data.values.github_app_private_key
+      run:
+        path: pipeline-tasks/ci/tasks/open-pr.sh
+#@ end
+
+- name: backup-org-to-gcp
+  plan:
+  - in_parallel:
+    - { get: every-day-trigger, trigger: true }
+    - { get: pipeline-tasks }
+  - task: gcp-backup
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: us.gcr.io/galoyorg/galoy-dev
+      inputs:
+      - name: pipeline-tasks
+      params:
+        GOOGLE_CREDENTIALS: #@ data.values.staging_inception_creds
+        GOOGLE_BUCKET_NAME: #@ data.values.staging_bucket_name
+        GH_APP_ID: #@ data.values.github_app_id
+        GH_APP_PRIVATE_KEY: #@ data.values.github_app_private_key
+      run:
+        path: pipeline-tasks/ci/tasks/gcp-backup.sh
+
+resources:
+- name: shared-files
+  type: git
+  webhook_token: ((webhook.secret))
+  source:
+    paths:
+    - shared/**/*
+    - shared/*
+    - vendir.tmpl.yml
+    uri: #@ data.values.git_uri
+    branch: #@ data.values.git_branch
+    private_key: #@ data.values.github_private_key
+
+- name: pipeline-tasks
+  type: git
+  source:
+    paths: [ci/tasks/*, Makefile]
+    uri: #@ data.values.git_uri
+    branch: #@ data.values.git_branch
+    private_key: #@ data.values.github_private_key
+
+#@ for repo in data.values.src_repos:
+- name: #@ repo_pr_branch_resource_name(repo)
+  type: git
+  source:
+    uri: #@ data.values.git_org_uri + "/" + repo + ".git"
+    private_key: #@ data.values.github_private_key
+    branch: #@ data.values.pr_branch
+#@ end
+
+#@ for repo in data.values.src_repos:
+- name: #@ repo_resource_name(repo)
+  type: git
+  source:
+    uri: #@ data.values.git_org_uri + "/" + repo + ".git"
+    private_key: #@ data.values.github_private_key
+    branch: #@ data.values.source_repo_branch
+#@ end
+
+- name: nodejs-image-def
+  type: git
+  source:
+    paths: [images/nodejs-concourse/Dockerfile]
+    uri: #@ data.values.git_uri
+    branch: #@ data.values.git_branch
+    private_key: #@ data.values.github_private_key
+
+- name: nodejs-image
+  type: registry-image
+  source:
+    tag: latest
+    username: #@ data.values.docker_registry_user
+    password: #@ data.values.docker_registry_password
+    repository: #@ data.values.docker_registry + "/nodejs-concourse"
+
+- name: rust-image-def
+  type: git
+  source:
+    paths: [images/rust-concourse/Dockerfile]
+    uri: #@ data.values.git_uri
+    branch: #@ data.values.git_branch
+    private_key: #@ data.values.github_private_key
+
+- name: rust-image
+  type: registry-image
+  source:
+    tag: latest
+    username: #@ data.values.docker_registry_user
+    password: #@ data.values.docker_registry_password
+    repository: #@ data.values.docker_registry + "/rust-concourse"
+
+- name: release-pipeline-image
+  type: registry-image
+  source:
+    tag: latest
+    username: #@ data.values.docker_registry_user
+    password: #@ data.values.docker_registry_password
+    repository: #@   data.values.docker_registry + "/release-pipeline"
+
+- name: release-pipeline-image-def
+  type: git
+  source:
+    paths: [images/release/Dockerfile]
+    uri: #@ data.values.git_uri
+    branch: #@ data.values.git_branch
+    private_key: #@ data.values.github_private_key
+
+- name: wincross-pipeline-image
+  type: registry-image
+  source:
+    tag: latest
+    username: #@ data.values.docker_registry_user
+    password: #@ data.values.docker_registry_password
+    repository: #@   data.values.docker_registry + "/wincross-rust"
+
+- name: wincross-pipeline-image-def
+  type: git
+  source:
+    paths: [images/wincross/Dockerfile]
+    uri: #@ data.values.git_uri
+    branch: #@ data.values.git_branch
+    private_key: #@ data.values.github_private_key
+
+- name: every-day-trigger
+  type: time
+  icon: clock-outline
+  source:
+    interval: 24h
