@@ -13,7 +13,7 @@ docker_registry_user: ((docker-creds.username))
 docker_registry_password: ((docker-creds.password))
 container_image: galoy-dev
 staging_inception_creds: ((staging-gcp-creds.creds_json))
-staging_bucket_name: galoy-staging-backups
+staging_bucket_name: galoystaging-backups
 
 git_org_uri: git@github.com:GaloyMoney
 pr_branch: bump-shared-tasks
