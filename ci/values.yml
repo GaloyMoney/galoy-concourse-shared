@@ -9,8 +9,8 @@ github_app_id: ((github.github_app_id))
 github_app_private_key: ((github.github_app_private_key))
 
 docker_registry: us.gcr.io/galoyorg
-docker_registry_user: ((docker-creds.username))
-docker_registry_password: ((docker-creds.password))
+gar_registry_user: ((gar-creds.username))
+gar_registry_password: ((gar-creds.password))
 container_image: galoy-dev
 staging_inception_creds: ((staging-gcp-creds.creds_json))
 staging_bucket_name: galoystaging-backups
