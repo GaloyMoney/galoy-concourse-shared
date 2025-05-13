@@ -20,7 +20,6 @@ pr_branch: bump-shared-tasks
 source_repo_branch: main
 
 src_repos:
-  sqlxmq-executor: ["rust", "docker"]
   bria: ["rust", "docker", "chart"]
   cala: ["rust", "docker"]
   lana-bank: ["rust", "docker"]
