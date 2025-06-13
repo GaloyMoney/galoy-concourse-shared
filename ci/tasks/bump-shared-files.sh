@@ -41,8 +41,6 @@ rename -f 's/^chart-//' *
 
 popd
 
-mv ci/vendor/config/*-dependabot.yml .github/dependabot.yml || true
-
 if [[ ! -f ./typos.toml ]]; then
   cat <<EOF > typos.toml
 [files]
