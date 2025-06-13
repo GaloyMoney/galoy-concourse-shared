@@ -49,7 +49,7 @@ cargo nextest run --verbose --locked
 echo "--- Tests done ---"
 
 echo "--- Cleaning up dependencies ---"
-ENGINE_DEFAULT=podman bin/clean-deps.sh
+podman compose down
 echo "--- Cleanup done ---"
 
 echo "--- All steps completed ---"
