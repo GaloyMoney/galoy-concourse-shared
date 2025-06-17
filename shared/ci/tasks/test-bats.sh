@@ -16,6 +16,8 @@ cachix push "${CACHIX_CACHE_NAME}" dev-profile
 echo "--- Running bats tests in Nix environment ---"
 
 nix -L develop --command sh -exc '
+set -euo pipefail
+
 cd ..
 source pipeline-tasks/ci/vendor/tasks/helpers.sh
 pushd repo
