@@ -1,4 +1,4 @@
-FROM python:3.8-buster
+FROM python:3.10-trixie
 
 RUN apt-get update \
   && apt-get install -y bash curl wget tar git gettext jq perl \
@@ -13,6 +13,13 @@ RUN wget https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSI
   && mv git-cliff-${GIT_CLIFF_VERSION}/git-cliff /usr/local/bin \
   && chmod +x /usr/local/bin/git-cliff \
   && rm -rf ./git-cliff-*
+
+ARG COG_VERSION=6.5.0
+RUN wget https://github.com/cocogitto/cocogitto/releases/download/${COG_VERSION}/cocogitto-${COG_VERSION}-x86_64-unknown-linux-musl.tar.gz \
+  && tar -zxvf cocogitto-${COG_VERSION}-x86_64-unknown-linux-musl.tar.gz \
+  && mv x86_64-unknown-linux-musl/cog /usr/local/bin \
+  && chmod +x /usr/local/bin/cog \
+  && rm -rf cocogitto-*
 
 ARG HELM_VERSION=3.8.0
 RUN wget https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz \
