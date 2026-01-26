@@ -38,27 +38,21 @@ groups:
 
 #@ def build_task(input_name, context_path):
 task: build
+privileged: true
 config:
   platform: linux
   image_resource:
     type: registry-image
     source:
-      repository: gcr.io/kaniko-project/executor
-      tag: debug
+      repository: concourse/oci-build-task
   inputs:
   - name: #@ input_name
   outputs:
   - name: image
   run:
-    path: /kaniko/executor
-    args:
-      - --dockerfile=Dockerfile
-      - #@ "--context=" + context_path
-      - --use-new-run
-      - --single-snapshot
-      - --cache=false
-      - --no-push
-      - --tar-path=image/image.tar
+    path: build
+  params:
+    CONTEXT: #@ context_path
 #@ end
 
 jobs:
