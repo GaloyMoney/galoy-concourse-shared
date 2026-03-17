@@ -60,6 +60,13 @@ RUN wget -O ghtoken \
 
 RUN wget -O- https://carvel.dev/install.sh | bash
 
+ARG FLY_VERSION=8.0.1
+RUN wget https://github.com/concourse/concourse/releases/download/v${FLY_VERSION}/fly-${FLY_VERSION}-linux-amd64.tgz \
+  && tar -zxvf fly-${FLY_VERSION}-linux-amd64.tgz \
+  && mv fly /usr/local/bin/fly \
+  && chmod +x /usr/local/bin/fly \
+  && rm -rf fly-*
+
 ENV CLOUDSDK_CORE_DISABLE_PROMPTS 1
 RUN curl -sSL https://sdk.cloud.google.com | bash
 ENV PATH $PATH:/root/google-cloud-sdk/bin
