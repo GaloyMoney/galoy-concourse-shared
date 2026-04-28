@@ -60,7 +60,7 @@ RUN wget -O ghtoken \
 
 RUN wget -O- https://carvel.dev/install.sh | bash
 
-ARG FLY_VERSION=8.0.1
+ARG FLY_VERSION=8.1.1
 RUN wget https://github.com/concourse/concourse/releases/download/v${FLY_VERSION}/fly-${FLY_VERSION}-linux-amd64.tgz \
   && tar -zxvf fly-${FLY_VERSION}-linux-amd64.tgz \
   && mv fly /usr/local/bin/fly \
