@@ -5,7 +5,19 @@ RUN rustc --version
 RUN rustup component add rustfmt
 RUN rustup component add clippy
 
-RUN cargo install cargo-nextest cargo-deny cargo-audit typos-cli sqlx-cli handlebars-cli
+ENV CARGO_NEXTEST_VERSION 0.9.131
+ENV CARGO_DENY_VERSION 0.19.0
+ENV CARGO_AUDIT_VERSION 0.22.1
+ENV TYPOS_CLI_VERSION 1.44.0
+ENV SQLX_CLI_VERSION 0.8.6
+ENV HANDLEBARS_CLI_VERSION 1.0.0
+
+RUN cargo install --locked cargo-nextest --version ${CARGO_NEXTEST_VERSION}
+RUN cargo install cargo-deny --version ${CARGO_DENY_VERSION} \
+  && cargo install cargo-audit --version ${CARGO_AUDIT_VERSION} \
+  && cargo install typos-cli --version ${TYPOS_CLI_VERSION} \
+  && cargo install sqlx-cli --version ${SQLX_CLI_VERSION} \
+  && cargo install handlebars-cli --version ${HANDLEBARS_CLI_VERSION}
 
 # Install gcloud
 ENV CLOUDSDK_CORE_DISABLE_PROMPTS 1
