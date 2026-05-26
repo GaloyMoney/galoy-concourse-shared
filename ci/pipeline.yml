@@ -29,7 +29,6 @@ groups:
 - name: images
   jobs:
   - build-rust-concourse-image
-  - build-nodejs-concourse-image
   - build-wincross-pipeline-image
   - build-release-pipeline-image
 - name: backups
@@ -62,15 +61,6 @@ jobs:
   - {get: rust-image-def, trigger: true}
   - #@ build_task("rust-image-def", "rust-image-def/images/rust-concourse")
   - put: rust-image
-    params:
-      image: image/image.tar
-
-- name: build-nodejs-concourse-image
-  serial: true
-  plan:
-  - {get: nodejs-image-def, trigger: true}
-  - #@ build_task("nodejs-image-def", "nodejs-image-def/images/nodejs-concourse")
-  - put: nodejs-image
     params:
       image: image/image.tar
 
@@ -199,22 +189,6 @@ resources:
     private_key: #@ data.values.github_private_key
     branch: #@ data.values.source_repo_branch
 #@ end
-
-- name: nodejs-image-def
-  type: git
-  source:
-    paths: [images/nodejs-concourse/Dockerfile]
-    uri: #@ data.values.git_uri
-    branch: #@ data.values.git_branch
-    private_key: #@ data.values.github_private_key
-
-- name: nodejs-image
-  type: registry-image
-  source:
-    tag: latest
-    username: #@ data.values.gar_registry_user
-    password: #@ data.values.gar_registry_password
-    repository: #@ data.values.docker_registry + "/nodejs-concourse"
 
 - name: rust-image-def
   type: git
