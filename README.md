@@ -1,70 +1,50 @@
-## Contains shared CI tasks synced across repositories.
+# galoy-concourse-shared
 
-### Steps for adding in a new repository:
+Shared CI tasks, pipeline fragments, and GitHub Actions workflows synced across Galoy repositories.
 
-1. Clone and get into the repository:
+## Usage
 
-```
-gh repo clone GaloyMoney/concourse-shared
-cd concourse-shared
-```
+Enter the Nix dev shell, then update the Concourse pipeline:
 
-2. Edit `ci/values.yml` and under `src_repos`, add the new repository. The key name for the repository must be the name of the repository as on GitHub under GaloyMoney organization.
-   This file contains many feature flags according to which the Pull Request will be created with shared tasks.
-3. Push the change on the CI.
-
-```
+```sh
+direnv allow
 ci/repipe
 ```
 
-4. Make sure that `galoybot` has permissions to the target repository and it also has `galoybot` as a possible label in the PR.
+## Adding a repository
 
-This would, in turn create a new job under the concourse-shared pipeline and when it runs, it would automatically create the pull request for you on the specified target repository.
+1. Add the repository to `src_repos` in `ci/values.yml`.
 
-### Shared Folder Details (shared/\*\*)
+```yaml
+src_repos:
+  bria: ["rust", "docker", "chart"]
+  cala: ["rust", "docker"]
+```
 
-1. `actions` folder - Gets synced to `.github/workflows/` folder
-2. `ci/tasks` folder - Get synced to `ci/vendor` folder
+2. Merge the change and run:
 
-### Feature Flags
+```sh
+ci/repipe
+```
 
-Feature Flags `nodejs`, `rust`, `chart` and `docker` are supported right now.
-Files whose names don't start with them are treated as common and synced to all.
+This creates a `bump-shared-files-in-<repo>` job. When it runs, it opens a PR in the target repository with updated vendored CI files.
 
-| Feature | Description                                              |
-| ------- | -------------------------------------------------------- |
-| Nodejs  | Source Codebase is Node.js                               |
-| Rust    | Source Codebase is Rust                                  |
-| Docker  | Docker image is present in the source                    |
-| Chart   | The docker image getting generated also has a Helm Chart |
+Make sure `galoybot` has access to the target repository.
 
-#### nodejs
+## Shared files
 
-- GH Actions:
-  - Check Code (`make check-code` after `yarn install`)
-  - Audit (`make audit` after `yarn install`)
+- `shared/actions/*` syncs to `.github/workflows/`
+- `shared/ci/**/*` syncs to `ci/vendor/`
 
-- Concourse CI:
-  - Helpers (`unpack_deps` for caching node_modules)
-  - Install Deps (`yarn install`)
-  - Check Code (`make check-code`)
-  - Audit (`make audit`)
+## Feature flags
 
-#### rust
+Supported feature flags:
 
-- GH Actions:
-  - Check Code (`make check-code`)
+| Feature | Description |
+| --- | --- |
+| `nodejs` | Node.js CI files |
+| `rust` | Rust CI files |
+| `docker` | Docker image build CI files |
+| `chart` | Helm chart release CI files |
 
-- Concourse CI:
-  - Helpers (Some `CARGO_` envs)
-  - Check Code (`make check-code`)
-
-#### docker
-
-- Concorse CI:
-  - Prep Docker Build Env
-
-#### chart
-
-- Concourse CI:
-  - Open Charts PR
+Files without a feature prefix are synced to all configured repositories.
