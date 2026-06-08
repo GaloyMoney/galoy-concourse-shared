@@ -21,5 +21,7 @@ source_repo_branch: main
 
 src_repos:
   bria: ["rust", "docker", "chart"]
-  cala: ["rust", "docker"]
+  cala: ["rust"]
+  job: ["rust"]
+  obix: ["rust"]
   lana-bank: ["rust", "docker"]
