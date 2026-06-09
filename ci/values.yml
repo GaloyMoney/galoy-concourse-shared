@@ -24,4 +24,3 @@ src_repos:
   cala: ["rust"]
   job: ["rust"]
   obix: ["rust"]
-  lana-bank: ["rust", "docker"]
