@@ -125,10 +125,7 @@ jobs:
   - task: gcp-backup
     config:
       platform: linux
-      image_resource:
-        type: registry-image
-        source:
-          repository: us.gcr.io/galoyorg/galoy-dev
+      image_resource: #@ task_image_config()
       inputs:
       - name: pipeline-tasks
       params:
