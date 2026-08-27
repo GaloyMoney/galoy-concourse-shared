@@ -22,5 +22,6 @@ source_repo_branch: main
 src_repos:
   bria: ["rust", "docker", "chart"]
   cala: ["rust"]
+  es-entity: ["rust"]
   job: ["rust"]
   obix: ["rust"]
