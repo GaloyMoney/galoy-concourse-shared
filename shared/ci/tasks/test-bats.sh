@@ -10,7 +10,7 @@ nix -L develop --command sh -exc '
 set -euo pipefail
 
 cd ..
-source pipeline-tasks/ci/vendor/tasks/rust-helpers.sh
+source pipeline-tasks/ci/vendor/tasks/helpers.sh
 pushd repo
 
 echo "--- Checking for Podman (via nix) ---"
