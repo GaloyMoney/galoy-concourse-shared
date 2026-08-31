@@ -63,9 +63,15 @@ setup_nix_cache() {
   if [ -f "$NIX_CACHE_DIR/nix-cache-info" ]; then
     cache_size=$(du -sh "$NIX_CACHE_DIR" 2>/dev/null | cut -f1)
     echo "nix-cache: local cache found (${cache_size}), restoring"
-    # Modify nix.conf for tools that read it directly
-    echo "extra-substituters = file://$NIX_CACHE_DIR" >> /etc/nix/nix.conf
-    echo "require-sigs = false" >> /etc/nix/nix.conf
+    # Modify nix.conf for tools that read it directly when the image permits
+    # it. In cachix-flakes images this is commonly a read-only store symlink.
+    if printf '%s\n' \
+      "extra-substituters = file://$NIX_CACHE_DIR" \
+      "require-sigs = false" 2>/dev/null >> /etc/nix/nix.conf; then
+      echo "nix-cache: added local substituter to /etc/nix/nix.conf"
+    else
+      echo "nix-cache: /etc/nix/nix.conf is read-only; using NIX_CONFIG"
+    fi
 
     # Export NIX_CONFIG so the running nix-daemon picks up changes.
     # The daemon loads nix.conf at startup (before this wrapper runs),
@@ -421,10 +427,29 @@ save_nix_cache() {
   echo "nix-cache: done saving to local cache"
 }
 
+save_nix_cache_on_exit() {
+  task_status=$?
+  trap - EXIT
+
+  # Cache persistence is best effort and must not change the wrapped task's
+  # result. Disable errexit so a maintenance failure cannot mask that result.
+  set +e
+  (
+    set -e
+    save_nix_cache
+  )
+  cache_status=$?
+  if [ "$cache_status" -ne 0 ]; then
+    echo "nix-cache: warning: cache save failed with status $cache_status" >&2
+  fi
+
+  exit "$task_status"
+}
+
 echo "=== with-nix-cache: start $(date -u +%H:%M:%S) ==="
 setup_fetch_retries
 setup_nix_cache
-trap save_nix_cache EXIT
+trap save_nix_cache_on_exit EXIT
 
 # Raise fd soft limit to hard limit early so all child processes
 # (nix builds, process-compose services) inherit the higher value.
@@ -438,4 +463,3 @@ echo "fd limits: soft=$(ulimit -Sn) hard=$(ulimit -Hn)"
 echo "=== with-nix-cache: setup done $(date -u +%H:%M:%S), running task ==="
 
 "$@"
-
