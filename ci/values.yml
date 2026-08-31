@@ -20,7 +20,6 @@ pr_branch: bump-shared-tasks
 source_repo_branch: main
 
 src_repos:
-  bria: ["rust", "docker", "chart"]
   cala: ["rust"]
   es-entity: ["rust"]
   job: ["rust"]
