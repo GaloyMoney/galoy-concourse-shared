@@ -180,7 +180,24 @@ narinfo_store_path() {
 }
 
 write_narinfo_list() {
-  ls -tr "$NIX_CACHE_DIR"/*.narinfo > "$1" 2>/dev/null || true
+  output=$1
+
+  if [ ! -d "$NIX_CACHE_DIR" ] || [ ! -r "$NIX_CACHE_DIR" ] || [ ! -x "$NIX_CACHE_DIR" ]; then
+    echo "nix-cache: cannot enumerate narinfo entries in $NIX_CACHE_DIR; aborting maintenance" >&2
+    return 1
+  fi
+
+  set -- "$NIX_CACHE_DIR"/*.narinfo
+  if [ "$#" -eq 1 ] && [ "$1" = "$NIX_CACHE_DIR/*.narinfo" ] && [ ! -e "$1" ]; then
+    : > "$output"
+    return
+  fi
+
+  if ! ls -tr "$@" > "$output" 2>/dev/null; then
+    rm -f "$output"
+    echo "nix-cache: failed to enumerate narinfo entries; aborting maintenance" >&2
+    return 1
+  fi
 }
 
 write_payload_nar_list() {
