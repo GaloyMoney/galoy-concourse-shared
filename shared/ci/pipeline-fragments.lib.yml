@@ -579,7 +579,7 @@ plan:
     params:
       FUZZ_SECONDS: #@ fuzz_seconds
   ensure:
-    do:
+    in_parallel:
     - task: store-corpus
       config:
         platform: linux
