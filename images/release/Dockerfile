@@ -1,27 +1,27 @@
-FROM python:3.10-trixie
+FROM python:3.13-trixie
 
 RUN apt-get update \
   && apt-get install -y bash curl wget tar git gettext jq perl \
   && apt-get clean
 
-RUN wget https://github.com/mikefarah/yq/releases/download/v4.17.2/yq_linux_386.tar.gz -O - |\
-  tar xz && mv yq_linux_386 /usr/bin/yq
+RUN wget https://github.com/mikefarah/yq/releases/download/v4.54.1/yq_linux_amd64.tar.gz -O - |\
+  tar xz && mv yq_linux_amd64 /usr/bin/yq
 
-ARG GIT_CLIFF_VERSION=2.12.0
+ARG GIT_CLIFF_VERSION=2.14.2
 RUN wget https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}/git-cliff-${GIT_CLIFF_VERSION}-x86_64-unknown-linux-gnu.tar.gz \
   && tar -zxvf git-cliff-${GIT_CLIFF_VERSION}-x86_64-unknown-linux-gnu.tar.gz \
   && mv git-cliff-${GIT_CLIFF_VERSION}/git-cliff /usr/local/bin \
   && chmod +x /usr/local/bin/git-cliff \
   && rm -rf ./git-cliff-*
 
-ARG COG_VERSION=6.5.0
+ARG COG_VERSION=7.0.0
 RUN wget https://github.com/cocogitto/cocogitto/releases/download/${COG_VERSION}/cocogitto-${COG_VERSION}-x86_64-unknown-linux-musl.tar.gz \
   && tar -zxvf cocogitto-${COG_VERSION}-x86_64-unknown-linux-musl.tar.gz \
   && mv x86_64-unknown-linux-musl/cog /usr/local/bin \
   && chmod +x /usr/local/bin/cog \
   && rm -rf cocogitto-*
 
-ARG HELM_VERSION=3.8.0
+ARG HELM_VERSION=3.22.1
 RUN wget https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz \
   && tar -zxvf helm-v${HELM_VERSION}-linux-amd64.tar.gz \
   && mv linux-amd64/helm /usr/local/bin \
@@ -44,16 +44,16 @@ RUN git config --global user.email "bot@galoy.io" \
 
 RUN pip install --upgrade bump2version
 
-ENV GH_CLI_VERSION 2.23.0
+ENV GH_CLI_VERSION 2.102.0
 RUN mkdir ghcli && cd ghcli \
-  && wget https://github.com/cli/cli/releases/download/v${GH_CLI_VERSION}/gh_${GH_CLI_VERSION}_linux_386.tar.gz -O ghcli.tar.gz \
+  && wget https://github.com/cli/cli/releases/download/v${GH_CLI_VERSION}/gh_${GH_CLI_VERSION}_linux_amd64.tar.gz -O ghcli.tar.gz \
   && tar --strip-components=1 -xf ghcli.tar.gz \
   && mv bin/gh /usr/local/bin && cd ../ && rm -rf ./ghcli
 
-ENV GHTOKEN_VERSION 2.0.1
+ENV GHTOKEN_VERSION 2.0.10
 RUN wget -O ghtoken \
-  https://github.com/Link-/gh-token/releases/download/v2.0.1/linux-amd64 && \
-  echo "f76e8cb35f0b04b59073a486cc952e50fa9f1c930a25619ea9abcf44a13165c4  ghtoken" | \
+  https://github.com/Link-/gh-token/releases/download/v${GHTOKEN_VERSION}/linux-amd64 && \
+  echo "342adb88bb2c5d334a0f6d5fc094e3de4e755c6ccef45a2fd55ed6b1d79cd8a6  ghtoken" | \
   shasum -c - && \
   chmod u+x ./ghtoken && \
   mv ./ghtoken /usr/local/bin/ghtoken
