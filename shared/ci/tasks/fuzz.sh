@@ -29,7 +29,8 @@
 #! the stored corpus is pruned, and seed changes travel with the code. Repos
 #! without `fuzz/seeds/` are unaffected (backward compatible).
 #!
-#! Requires: bash, git, cargo, tar, and cargo-fuzz (auto-installed if missing).
+#! Requires: bash, git, cargo, tar, and a runnable cargo-fuzz — from PATH (the
+#! nix devshell ships one) or else auto-installed into CARGO_HOME.
 #! A GNU coreutils `timeout` (or `gtimeout`) bounds each target's wall clock
 #! when present; without it fuzzing runs unguarded.
 
@@ -38,9 +39,16 @@ set -euo pipefail
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$ROOT"
 
-if ! command -v cargo-fuzz >/dev/null 2>&1; then
-  echo "cargo-fuzz not found on PATH; installing..."
-  cargo install cargo-fuzz --locked
+#! Probe cargo-fuzz by running it, not with `command -v`: cargo resolves
+#! subcommands through $CARGO_HOME/bin *before* PATH, so a copy left behind in
+#! a cached CARGO_HOME shadows a perfectly good cargo-fuzz from the devshell.
+#! Such a copy stops working when the toolchain it was linked against moves
+#! (e.g. a nixpkgs bump relocates glibc, leaving the binary's ELF interpreter
+#! dangling -> ENOENT) while `cargo install` still counts it as installed.
+#! --force rewrites the install, replacing the shadowing copy.
+if ! cargo fuzz --version >/dev/null 2>&1; then
+  echo "cargo-fuzz missing or not runnable; installing..."
+  cargo install cargo-fuzz --locked --force
 fi
 
 FUZZ_SECONDS="${FUZZ_SECONDS:-60}"
@@ -59,7 +67,18 @@ if [ -n "${CORPUS_TARBALL_IN:-}" ] && ls -d $CORPUS_TARBALL_IN >/dev/null 2>&1; 
   tar -xzf $CORPUS_TARBALL_IN -C fuzz/
 fi
 
-mapfile -t targets < <(cd fuzz && cargo fuzz list)
+#! Fail loudly when discovery fails. `mapfile -t targets < <(...)` cannot report
+#! the producer's exit status, so a broken cargo-fuzz used to surface as
+#! "discovered 0 target(s)" followed by an unrelated error two steps later.
+if ! target_list="$(cd fuzz && cargo fuzz list)"; then
+  echo "ERROR: 'cargo fuzz list' failed; cannot discover fuzz targets" >&2
+  exit 1
+fi
+if [ -z "$target_list" ]; then
+  echo "ERROR: 'cargo fuzz list' found no targets under fuzz/" >&2
+  exit 1
+fi
+mapfile -t targets <<< "$target_list"
 echo "discovered ${#targets[@]} target(s): ${targets[*]}"
 
 #! Merge any committed seed corpus (fuzz/seeds/<target>/) into fuzz/corpus/.
